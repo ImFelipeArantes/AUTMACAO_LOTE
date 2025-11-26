@@ -91,7 +91,10 @@ valores_internet_id = processar_dataframe(valores_internet_id, padronizar_obs_fl
 def arquivo_teia():
     global teia, arquivo_modelo,nome_arquivo_padrao
     arquivo_entrada_sevs_teia = ctk.filedialog.askopenfilename(title='Abrir arquivo de extração do TEIA')
-    teia = pd.read_csv(arquivo_entrada_sevs_teia, sep=';')
+    try:
+        teia = pd.read_csv(arquivo_entrada_sevs_teia, sep=';')
+    except:
+        teia = pd.read_excel(arquivo_entrada_sevs_teia)
     sevs_removidas = extracaoTeia(teia).tratar_modelo_gaia(removed_sevs=check_remover.get())
 
     
