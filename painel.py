@@ -41,9 +41,13 @@ arquivo_modelo = pd.read_excel('arquivo_padrao.xlsx')
 
 try:
     valores_ethernet = pd.read_sql('SELECT * FROM valores_terceiros_eth_filtered', engine)
+    valores_ethernet.to_csv("./arquivos/valores_ethernet.csv")
     valores_banda_larga = pd.read_sql('SELECT * FROM valores_terceiros_internet', engine)
+    valores_banda_larga.to_csv("./arquivos/valores_banda_larga.csv")
     valores_internet_id = pd.read_sql('SELECT * FROM valores_terceiros_internet_id', engine)
+    valores_internet_id.to_csv("./arquivos/valores_internet_id.csv")
     status = pd.read_sql('SELECT * FROM status', engine)
+    status.to_csv("./arquivos/status.csv")
     status = status.fillna('OK')
 except:
     valores_ethernet = pd.read_csv("./arquivos/valores_ethernet.csv")
@@ -495,7 +499,7 @@ def tratativa_inicial():
                                             sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] = v.FACILIDADE.replace('_',' ')
                                             sevs_tratar.at[index,'CONCATENADO_PROVEDOR'] = aux_resumosoe.TERCEIROS_ETH_INFORMACAO.values[0].split('PROPRIETÁRIO ')[-1]
                                             sevs_tratar.at[index,'ESTACAO_DE_ENTREGA'] = aux_resumosoe.TERCEIROS_ETH_ESTACAO_ENTREGA.values[0].split(' / ')[-1]
-                                            sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = 'TERCEIROS ETH'
+                                            sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = 'TERCEIRO ETH'
                                             break
                                         
                                     else:
@@ -713,7 +717,7 @@ def prox_acesso():
                                                     sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] = v.FACILIDADE.replace('_',' ')
                                                     sevs_tratar.at[index,'CONCATENADO_PROVEDOR'] = aux_resumosoe.TERCEIROS_ETH_INFORMACAO.values[0].split('PROPRIETÁRIO ')[-1]
                                                     sevs_tratar.at[index,'ESTACAO_DE_ENTREGA'] = aux_resumosoe.TERCEIROS_ETH_ESTACAO_ENTREGA.values[0].split(' / ')[-1]
-                                                    sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = 'TERCEIROS ETH'
+                                                    sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = 'TERCEIRO ETH'
 
                                                     break
                                                 
@@ -932,7 +936,7 @@ def acesso_anterior():
                                                     sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] = v.FACILIDADE.replace('_',' ')
                                                     sevs_tratar.at[index,'CONCATENADO_PROVEDOR'] = aux_resumosoe.TERCEIROS_ETH_INFORMACAO.values[0].split('PROPRIETÁRIO ')[-1]
                                                     sevs_tratar.at[index,'ESTACAO_DE_ENTREGA'] = aux_resumosoe.TERCEIROS_ETH_ESTACAO_ENTREGA.values[0].split(' / ')[-1]
-                                                    sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = 'TERCEIROS ETH'
+                                                    sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = 'TERCEIRO ETH'
 
                                                     break
                                                 
@@ -1311,8 +1315,8 @@ def finaliza_sevs():
             if 'Indeferido' not in value.BBIP:
                 if len(fechamento_teia) == 0:
                     fechamento_teia.at[0,'sequencial'] = value.SEV
-                    fechamento_teia.at[0,'latitude'] = value.LATITUDE
-                    fechamento_teia.at[0,'longitude'] = value.LONGITUDE
+                    fechamento_teia.at[0,'latitude'] = str(value.LATITUDE).replace('.',',')
+                    fechamento_teia.at[0,'longitude'] = str(value.LONGITUDE).replace('.',',')
                     fechamento_teia.at[0,'uf'] = value.UF
                     fechamento_teia.at[0,'cnl'] = value.CNL
                     fechamento_teia.at[0,'facilidade'] = value.RESPOSTA_FACILIDADE
@@ -1414,8 +1418,8 @@ def finaliza_sevs():
                     fechamento_teia.at[0,'tecnologia'] = value.TECNOLOGIA_ACESSO_PRINCIPAL
                 else:
                     fechamento_teia.at[len(fechamento_teia),'sequencial'] = value.SEV
-                    fechamento_teia.at[len(fechamento_teia) - 1,'latitude'] = value.LATITUDE
-                    fechamento_teia.at[len(fechamento_teia) - 1,'longitude'] = value.LONGITUDE
+                    fechamento_teia.at[len(fechamento_teia) - 1,'latitude'] = str(value.LATITUDE).replace('.',',')
+                    fechamento_teia.at[len(fechamento_teia) - 1,'longitude'] = str(value.LONGITUDE).replace('.',',')
                     fechamento_teia.at[len(fechamento_teia) - 1,'uf'] = value.UF
                     fechamento_teia.at[len(fechamento_teia) - 1,'cnl'] = value.CNL
                     fechamento_teia.at[len(fechamento_teia) - 1,'facilidade'] = value.RESPOSTA_FACILIDADE
