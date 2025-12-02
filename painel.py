@@ -17,10 +17,12 @@ service = Service(chromedriver_autoinstaller.install())
 pd.set_option('display.max_columns', None)
 pd.set_option('future.no_silent_downcasting', True)
 
+engine = create_engine('mysql+pymysql://viabilidade:senha_segura123#@10.0.15.243:3306/desenvolvimento_viabilidade')
+
 capacity = pd.read_excel('./arquivos/capacity.xlsx')
 tecnologia_capacity = pd.read_excel('./arquivos/tecnologia_capacity.xlsx')
 capacity_fixa = pd.read_excel('./arquivos/capacity_fixa.xlsx')
-capacity_funil = pd.read_excel('./arquivos/capacity_funil.xlsx')
+capacity_funil = pd.read_sql('SELECT * FROM capacity_funil', engine)
 facilidades = pd.read_excel('./arquivos/facilidades_tecnologia_prioridade.xlsx').sort_values('PRIORIDADE',ascending=True).fillna('')
 custos_proprios = pd.read_excel('./arquivos/custos_nfv.xlsx')
 tecnologia_bbip_epl_eaccess = pd.read_excel('./arquivos/tecnologia_bbip_eaccess_epl.xlsx')
@@ -33,7 +35,6 @@ estacoes_newteia = pd.read_excel('./arquivos/lista_estacoes_newteia.xlsx').filln
 municipio_localidade = pd.read_excel('./arquivos/municipio_localidade.xlsx')
 consulta_banda = pd.read_excel('./arquivos/consulta_banda.xlsx')
 
-engine = create_engine('mysql+pymysql://viabilidade:senha_segura123#@10.0.15.243:3306/desenvolvimento_viabilidade')
 
 
 # teia = pd.read_csv(r"C:\Users\F257064\Documents\Codes\AUTOMACOES_LOTE\arquivos_teste\ext_20250102_020045-512941a0b32d0e350ccae43a67681edf.csv",sep=';').fillna('')
