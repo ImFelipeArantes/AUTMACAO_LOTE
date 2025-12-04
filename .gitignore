@@ -1,10 +1,13 @@
 valores_ethernet.csv
-capacity_funil.csv
+valores_internet_id.csv
+valores_banda_larga.csv
+capacity_funil.xlsx
 arquivo_nuvens.xlsx
 arquivo_restricao.xlsx
 arquivo_resultado.xlsx
 arquivo_resumosoe.xlsx
 atendimento_gaia.xlsx
+04_PADRAO.xlsx
 fechamento_lote_nfv.csv
 fechamento_nfv_lote_manual.xlsx
 sevs_removidas.xlsx
