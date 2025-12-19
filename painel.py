@@ -50,7 +50,7 @@ try:
     status.to_csv("./arquivos/status.csv")
     status = status.fillna('OK')
     capacity_funil = pd.read_sql('SELECT * FROM capacity_funil', engine)
-    capacity_funil.to_excel('capacity_funil.xlsx',index=False)
+    capacity_funil.to_excel('./arquivos/capacity_funil.xlsx',index=False)
 except:
     valores_ethernet = pd.read_csv("./arquivos/valores_ethernet.csv")
     valores_banda_larga = pd.read_csv("./arquivos/valores_banda_larga.csv")
