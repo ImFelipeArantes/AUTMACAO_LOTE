@@ -1335,7 +1335,8 @@ def finaliza_sevs():
                         if value.SERVICO == 'VPE - VIP BSOD LIGHT':
                             aux_provedores = id_provedores[id_provedores.PROVEDOR_TEIA.str.contains('BANDA LARGA')]
                             aux_provedores = aux_provedores[aux_provedores.PROVEDOR_TEIA.str.contains(value.PROVEDOR_FINAL_TER)]
-                            aux_provedores = aux_provedores[aux_provedores.PROVEDOR_TEIA.str.contains(value.UF)]
+                            aux_provedores = aux_provedores[aux_provedores.UF == value.UF]
+                            
                             try:
                                 fechamento_teia.at[0,'provedor'] = aux_provedores.PROVEDOR_TEIA.values[0]
                                 fechamento_teia.at[0,'id_provedor'] = aux_provedores.ID.values[0]
@@ -1348,7 +1349,7 @@ def finaliza_sevs():
                                 aux_provedores = id_provedores[~id_provedores.PROVEDOR_TEIA.str.contains('BANDA LARGA')]
                                 aux_provedores = aux_provedores[~aux_provedores.PROVEDOR_TEIA.str.contains('SIMETRICO')]
                                 aux_provedores = aux_provedores[aux_provedores.PROVEDOR_TEIA.str.contains(value.PROVEDOR_FINAL_TER)]
-                                aux_provedores = aux_provedores[aux_provedores.PROVEDOR_TEIA.str.contains(value.UF)]
+                                aux_provedores = aux_provedores[aux_provedores.UF == value.UF]
                                 if len(aux_provedores) == 0:
                                     aux_provedores = id_provedores[~id_provedores.PROVEDOR_TEIA.str.contains('BANDA LARGA')]
                                     aux_provedores = aux_provedores[~aux_provedores.PROVEDOR_TEIA.str.contains('SIMETRICO')]
@@ -1363,7 +1364,7 @@ def finaliza_sevs():
                             else:
                                 aux_provedores = id_provedores[id_provedores.PROVEDOR_TEIA.str.contains('SIMETRICO')]
                                 aux_provedores = aux_provedores[aux_provedores.PROVEDOR_TEIA.str.contains(value.PROVEDOR_FINAL_TER)]
-                                aux_provedores = aux_provedores[aux_provedores.PROVEDOR_TEIA.str.contains(value.UF)]
+                                aux_provedores = aux_provedores[aux_provedores.UF == value.UF]
                                 try:
                                     fechamento_teia.at[0,'provedor'] = aux_provedores.PROVEDOR_TEIA.values[0]
                                     fechamento_teia.at[0,'id_provedor'] = aux_provedores.ID.values[0]
@@ -1437,7 +1438,7 @@ def finaliza_sevs():
                         if value.SERVICO == 'VPE - VIP BSOD LIGHT':
                             aux_provedores = id_provedores[id_provedores.PROVEDOR_TEIA.str.contains('BANDA LARGA')]
                             aux_provedores = aux_provedores[aux_provedores.PROVEDOR_TEIA.str.contains(value.PROVEDOR_FINAL_TER)]
-                            aux_provedores = aux_provedores[aux_provedores.PROVEDOR_TEIA.str.contains(value.UF)]
+                            aux_provedores = aux_provedores[aux_provedores.UF == value.UF]
                             try:
                                 fechamento_teia.at[len(fechamento_teia) - 1,'provedor'] = aux_provedores.PROVEDOR_TEIA.values[0]
                                 fechamento_teia.at[len(fechamento_teia) - 1,'id_provedor'] = aux_provedores.ID.values[0]
@@ -1450,7 +1451,7 @@ def finaliza_sevs():
                                 aux_provedores = id_provedores[~id_provedores.PROVEDOR_TEIA.str.contains('BANDA LARGA')]
                                 aux_provedores = aux_provedores[~aux_provedores.PROVEDOR_TEIA.str.contains('SIMETRICO')]
                                 aux_provedores = aux_provedores[aux_provedores.PROVEDOR_TEIA.str.contains(value.PROVEDOR_FINAL_TER)]
-                                aux_provedores = aux_provedores[aux_provedores.PROVEDOR_TEIA.str.contains(value.UF)]
+                                aux_provedores = aux_provedores[aux_provedores.UF == value.UF]
                                 if len(aux_provedores) == 0:
                                     aux_provedores = id_provedores[~id_provedores.PROVEDOR_TEIA.str.contains('BANDA LARGA')]
                                     aux_provedores = aux_provedores[~aux_provedores.PROVEDOR_TEIA.str.contains('SIMETRICO')]
@@ -1465,7 +1466,7 @@ def finaliza_sevs():
                             else:
                                 aux_provedores = id_provedores[id_provedores.PROVEDOR_TEIA.str.contains('SIMETRICO')]
                                 aux_provedores = aux_provedores[aux_provedores.PROVEDOR_TEIA.str.contains(value.PROVEDOR_FINAL_TER)]
-                                aux_provedores = aux_provedores[aux_provedores.PROVEDOR_TEIA.str.contains(value.UF)]
+                                aux_provedores = aux_provedores[aux_provedores.UF == value.UF]
                                 try:
                                     fechamento_teia.at[len(fechamento_teia) - 1,'provedor'] = aux_provedores.PROVEDOR_TEIA.values[0]
                                     fechamento_teia.at[len(fechamento_teia) - 1,'id_provedor'] = aux_provedores.ID.values[0]
