@@ -23,7 +23,6 @@ capacity = pd.read_excel('./arquivos/capacity.xlsx')
 tecnologia_capacity = pd.read_excel('./arquivos/tecnologia_capacity.xlsx')
 capacity_fixa = pd.read_excel('./arquivos/capacity_fixa.xlsx')
 facilidades = pd.read_excel('./arquivos/facilidades_tecnologia_prioridade.xlsx').sort_values('PRIORIDADE',ascending=True).fillna('')
-custos_proprios = pd.read_excel('./arquivos/custos_nfv.xlsx')
 tecnologia_bbip_epl_eaccess = pd.read_excel('./arquivos/tecnologia_bbip_eaccess_epl.xlsx')
 bb_municipio_estacao = pd.read_excel('./arquivos/bb_municipio_estacao.xlsx')
 estacoes_entregas = pd.read_excel('./arquivos/estacoes_entregas.xlsx')
@@ -51,6 +50,8 @@ try:
     status = status.fillna('OK')
     capacity_funil = pd.read_sql('SELECT * FROM capacity_funil', engine)
     capacity_funil.to_excel('./arquivos/capacity_funil.xlsx',index=False)
+    custos_proprios = pd.read_sql('SELECT * FROM custos_nfv', engine)
+    custos_proprios.to_excel('./arquivos/custos_nfv.xlsx',index=False)
 except:
     valores_ethernet = pd.read_csv("./arquivos/valores_ethernet.csv")
     valores_banda_larga = pd.read_csv("./arquivos/valores_banda_larga.csv")
@@ -58,6 +59,7 @@ except:
     status = pd.read_csv("./arquivos/status.csv")
     status = status.fillna('OK')
     capacity_funil = pd.read_excel('./arquivos/capacity_funil.xlsx')
+    custos_proprios = pd.read_excel('./arquivos/custos_nfv.xlsx')
     pass
 
 
