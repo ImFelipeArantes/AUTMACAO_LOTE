@@ -196,7 +196,11 @@ def selecionar_resultado():
 def selecionar_restricao():
     global restricao
     arquivo_restricao = ctk.filedialog.askopenfilename(title='Abrir arquivo restricao')
-    restricao = tratamentoRestricao(f"{arquivo_restricao}").trata_restricao()
+    tratador = tratamentoRestricao(f"{arquivo_restricao}")
+    restricao = tratador.trata_restricao()
+    # opcional: conferir se alguma linha nao pode ser realinhada com seguranca
+    if tratador.descartadas:
+        print(f'Atencao: {len(tratador.descartadas)} linha(s) para conferencia manual')
     restricao.to_excel('arquivo_restricao.xlsx',index=False)
     button_restricao = ctk.CTkButton(janela,text="Restrição",height=20,width=35,corner_radius=8,fg_color='green',hover_color='blue', command=selecionar_restricao)
     button_restricao.place(x=245, y=200)

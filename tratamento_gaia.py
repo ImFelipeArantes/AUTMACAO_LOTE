@@ -57,80 +57,69 @@ class tratamentoResultado():
 
         return df
     
+# Siglas de UF (ancora confiavel para detectar deslocamento no inicio da linha)
+UFS = {'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA',
+       'PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'}
+
+
 class tratamentoRestricao():
 
-    def __init__(self,arq):
-        file = open(arq, 'r', encoding="utf8")
-        self.restricao = file.readlines()
-        file.close()
+    def __init__(self, arq):
+        with open(arq, 'r', encoding="utf8") as file:
+            linhas = file.readlines()
+
+        # Remove a linha de titulo ("Restricao") se existir e separa o cabecalho
+        if linhas and linhas[0].strip().lower() in ('restricao', 'restrição', ''):
+            linhas.pop(0)
+
+        header = linhas[0].rstrip('\n').split('\t')
+        # Normaliza os nomes das colunas (sem acento, sem espaco, maiusculo)
+        self.colunas = [unidecode(h).replace(" ", "_").upper() for h in header]
+
+        self.ncols = len(self.colunas)              # 17 (agora com CAMADA)
+        self.idx_uf = self.colunas.index('ESTADO')  # ancora de deslocamento
+
+        self.dados = [l.rstrip('\n').split('\t') for l in linhas[1:] if l.strip()]
+        self.descartadas = []  # linhas que nao deu para realinhar com seguranca
+
+    def _realinhar(self, r):
+        """Padroniza UMA linha para self.ncols colunas de forma deterministica.
+
+        Ancoras: POSICAO e sempre o ultimo campo; ESTADO (UF) e sempre sigla de
+        2 letras e deve ficar no indice self.idx_uf. Se a linha ja esta completa,
+        retorna como esta.
+        """
+        if len(r) == self.ncols:
+            return r
+        if len(r) > self.ncols:
+            # Nunca observado; sinaliza para conferencia manual.
+            self.descartadas.append(('mais_colunas', r))
+            return None
+
+        posicao = r[-1]      # POSICAO sempre no fim
+        corpo = r[:-1]       # restante da linha
+
+        # Corrige deslocamento inicial: se a UF caiu uma posicao antes, o campo
+        # anterior a ESTADO veio vazio e foi descartado -> repoe em branco.
+        if len(corpo) > self.idx_uf and corpo[self.idx_uf] in UFS:
+            pass                                    # ja alinhado
+        elif len(corpo) > self.idx_uf - 1 and corpo[self.idx_uf - 1] in UFS:
+            corpo.insert(self.idx_uf - 1, ' ')      # repoe campo vazio antes da UF
+
+        # Completa as colunas finais vazias que o export descartou
+        if len(corpo) > self.ncols - 1:
+            self.descartadas.append(('corpo_grande', r))
+            return None
+        corpo += [' '] * (self.ncols - 1 - len(corpo))
+        corpo.append(posicao)                       # POSICAO volta para o fim
+        return corpo
 
     def trata_restricao(self):
-        self.restricao.pop(0)
+        data = [self._realinhar(r) for r in self.dados]
+        data = [r for r in data if r is not None]
 
-        for i in range(len(self.restricao)):
-            self.restricao[i] = self.restricao[i].removesuffix('\n')
-            self.restricao[i] = self.restricao[i].split("\t")
-
-        self.restricao[0].remove('Camada')
-
-        cols_restricao = self.restricao[0]
-        self.restricao.pop(0)
-
-        for i in cols_restricao:
-            ind = cols_restricao.index(i)
-            cols_restricao[ind] = unidecode(cols_restricao[ind]).replace(" ","_").upper()
-        
-        i = 0
-        tam = len(self.restricao)
-        while i < tam:
-            if i != (len(self.restricao) - 1):
-                sev_atual = self.restricao[i][1]
-                tam_restricao_atual = len(self.restricao[i])
-                if self.restricao[i+1][1] == sev_atual:
-                    if len(self.restricao[i+1]) > tam_restricao_atual:
-                        self.restricao.pop(i)
-                        tam -= 1
-                    else:
-                        i += 1
-                else:
-                    i += 1
-            else: i += 1
-
-
-        i = 0
-        while i < len(self.restricao):
-            x = 1
-            while x < len(self.restricao[i]):
-                if x == 1:
-                    sev = self.restricao[i][x]
-                    id = self.restricao[i][x-1]
-                    x += 15
-                else:
-                    self.restricao[i].insert(x, sev)
-                    self.restricao[i].insert(x, id)
-                    x += 16
-            i += 1
-            
-        i = 0
-        new_data = []
-        while i < len(self.restricao):
-            x = 0
-            while x < len(self.restricao[i]):
-                new_data.append(self.restricao[i][x:x+16])
-                x += 16
-            i += 1
-        self.restricao = new_data
-
-        i = 0
-        while i < len(self.restricao):
-            if len(self.restricao[i]) != 16:
-                self.restricao.pop(i)
-            else:
-                i += 1
-
-
-        df = pd.DataFrame(np.array(self.restricao[0:]),columns=cols_restricao)
-        df[['ID', 'SEV']] = df[['ID', 'SEV']].apply(pd.to_numeric)
+        df = pd.DataFrame(np.array(data), columns=self.colunas)
+        df[['ID', 'SEV']] = df[['ID', 'SEV']].apply(pd.to_numeric, errors='coerce')
 
         return df
     
