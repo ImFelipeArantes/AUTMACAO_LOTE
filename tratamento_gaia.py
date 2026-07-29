@@ -135,84 +135,78 @@ class tratamentoRestricao():
         return df
     
 
+# Siglas de UF (ancora confiavel para detectar deslocamento no inicio da linha)
+UFS = {'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA',
+       'PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'}
+
+COLUNAS = ['ID','SEV','Camada','OBJECTID','ESTACAO_ENTREGA','UF','SIGLA_LOC',
+           'NOME_NUVEM','REDE','TECNOLOGIA','MEIO_TRANSMISSAO','SITUACAO',
+           'ALT_NUVEM','PADRAO_PON','PROPRIETARIO','OBSERVACAO','ORIGEM',
+           'DATA_ATUALIZACAO','DATA_PREVISAO','VEL_MAX_VIABILIDADE',
+           'VEL_MAX_SEV_AUTOMATICA','MOTIVO','OPERADORA','NUMERO_OPERACIONAL',
+           'SIGLA_ESTACAO_CLARO','CODIGO_DESCARGA_CSL','SIGLA_ESTACAO_RESID',
+           'TIPO_INFRA','TIPO','STATUS','DONO','ROTEADORES_QTD','TX',
+           'FABRICANTE_OLT','ABRANGENCIA','CONCENTRADOR_OLT','POSICAO']
+
+NCOLS = len(COLUNAS)          # 37
+IDX_UF = COLUNAS.index('UF')  # 5
+
+
 class tratamentoNuvens():
 
-    def __init__(self,arq):
-        file = open(arq, 'r', encoding="utf8")
-        self.nuvens = file.readlines()
-        file.close()
+    def __init__(self, arq):
+        with open(arq, 'r', encoding="utf8") as file:
+            linhas = file.readlines()
+
+        # Remove a linha de titulo ("Nuvens") se existir, e o cabecalho
+        if linhas and linhas[0].strip().lower() in ('nuvens', ''):
+            linhas.pop(0)
+        self.header = linhas[0].rstrip('\n').split('\t')
+        self.dados = [l.rstrip('\n').split('\t') for l in linhas[1:] if l.strip()]
+
+        self.descartadas = []  # guarda linhas que nao deu para realinhar
+
+    def _realinhar(self, r):
+        """Padroniza UMA linha para NCOLS colunas de forma deterministica.
+
+        Ancoras: POSICAO e sempre o ultimo campo; UF e sempre sigla de 2 letras
+        e deve ficar no indice 5. Se a linha ja tem NCOLS, retorna como esta.
+        """
+        if len(r) == NCOLS:
+            return r
+        if len(r) > NCOLS:
+            # Nunca observado neste arquivo; sinaliza para inspecao manual.
+            self.descartadas.append(('mais_colunas', r))
+            return None
+
+        posicao = r[-1]      # POSICAO sempre no fim
+        corpo = r[:-1]       # restante da linha
+
+        # Corrige deslocamento inicial: se UF caiu no indice 4, a
+        # ESTACAO_ENTREGA veio vazia e foi descartada -> repoe em branco.
+        if len(corpo) > IDX_UF and corpo[IDX_UF] in UFS:
+            pass                              # ja alinhado
+        elif len(corpo) > IDX_UF - 1 and corpo[IDX_UF - 1] in UFS:
+            corpo.insert(IDX_UF - 1, ' ')     # repoe ESTACAO_ENTREGA vazio
+        # (se nao achar UF em nenhum dos dois, segue e apenas completa no fim)
+
+        # Completa as colunas finais vazias que foram descartadas
+        if len(corpo) > NCOLS - 1:
+            self.descartadas.append(('corpo_grande', r))
+            return None
+        corpo += [' '] * (NCOLS - 1 - len(corpo))
+        corpo.append(posicao)                 # POSICAO volta para o fim
+        return corpo
 
     def trata_nuvens(self):
-        self.nuvens.pop(0)
-        for i in range(len(self.nuvens)):
-            self.nuvens[i] = self.nuvens[i].removesuffix('\n')
-            self.nuvens[i] = self.nuvens[i].split("\t")
-            
+        data = [self._realinhar(r) for r in self.dados]
+        data = [r for r in data if r is not None]
 
-        self.nuvens[0].remove('Camada')
+        nuvens_df = pd.DataFrame(data, columns=COLUNAS)
 
-        data = self.nuvens[1:]
-
-
-        i = 0
-        tam = len(data)
-        while i < tam:
-            if i != (len(data) - 1):
-                sev_atual = data[i][1]
-                tam_nuvem_atual = len(data[i])
-                if data[i+1][1] == sev_atual:
-                    if len(data[i+1]) > tam_nuvem_atual:
-                        data.pop(i)
-                        tam -= 1
-                    else:
-                        i += 1
-                else:
-                    i += 1
-            else: i += 1
-
-        i = 0
-        while i < len(data):
-            tecnologia_pos = 0
-            while tecnologia_pos < len(data[i]):
-                if ('DOCSIS 3.0' in data[i][tecnologia_pos]) | ('DOCSIS 3.1' in data[i][tecnologia_pos]) | ('XDSL' in data[i][tecnologia_pos]) | ('HFC BSOD' in data[i][tecnologia_pos]) | ('VIRTUA HFC' in data[i][tecnologia_pos]) | ('VIRTUA GPON' in data[i][tecnologia_pos]) | ('GPON RES RESID' in data[i][tecnologia_pos]):
-                    for x in range(11):
-                        data[i].insert(tecnologia_pos + 9,' ')
-                    tecnologia_pos += 1
-                tecnologia_pos += 1
-
-
-            i += 1
-
-        i = 0
-        while i < len(data):
-            x = 1
-            while x < len(data[i]):
-                if x == 1:
-                    sev = data[i][x]
-                    id = data[i][x-1]
-                    x += 35
-                else:
-                    data[i].insert(x, sev)
-                    data[i].insert(x, id)
-                    x += 36
-            i += 1
-            
-        i = 0
-        new_data = []
-        while i < len(data):
-            x = 0
-            while x < len(data[i]):
-                new_data.append(data[i][x:x+36])
-                x += 36
-            i += 1
-        data = new_data
-
-        colunas = ['ID','SEV','OBJECTID','ESTACAO_ENTREGA','UF','SIGLA_LOC','NOME_NUVEM','REDE','TECNOLOGIA','MEIO_TRANSMISSAO','SITUACAO','ALT_NUVEM','PADRAO_PON','PROPRIETARIO','OBSERVACAO','ORIGEM','DATA_ATUALIZACAO','DATA_PREVISAO','VEL_MAX_VIABILIDADE','VEL_MAX_SEV_AUTOMATICA','MOTIVO','OPERADORA','NUMERO_OPERACIONAL','SIGLA_ESTACAO_CLARO','CODIGO_DESCARGA_CSL','SIGLA_ESTACAO_RESID','TIPO_INFRA','TIPO','STATUS','DONO','ROTEADORES_QTD','TX','FABRICANTE_OLT','ABRANGENCIA','CONCENTRADOR_OLT','POSICAO']
-
-        nuvens_df = pd.DataFrame(data, columns=colunas)
-
-        nuvens_df['SEV'] = pd.to_numeric(nuvens_df['SEV'],downcast='signed', errors='coerce')
-        nuvens_df = nuvens_df.drop(columns=['ID','POSICAO'])
+        nuvens_df['SEV'] = pd.to_numeric(nuvens_df['SEV'], downcast='signed',
+                                         errors='coerce')
+        nuvens_df = nuvens_df.drop(columns=['ID', 'POSICAO'])
         nuvens_df = nuvens_df.drop_duplicates()
 
         return nuvens_df
