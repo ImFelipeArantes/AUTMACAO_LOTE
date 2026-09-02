@@ -144,59 +144,10 @@ IDX_UF = COLUNAS.index('UF')  # 5
 class tratamentoNuvens():
 
     def __init__(self, arq):
-        with open(arq, 'r', encoding="utf8") as file:
-            linhas = file.readlines()
-
-        # Remove a linha de titulo ("Nuvens") se existir, e o cabecalho
-        if linhas and linhas[0].strip().lower() in ('nuvens', ''):
-            linhas.pop(0)
-        self.header = linhas[0].rstrip('\n').split('\t')
-        self.dados = [l.rstrip('\n').split('\t') for l in linhas[1:] if l.strip()]
-
-        self.descartadas = []  # guarda linhas que nao deu para realinhar
-
-    def _realinhar(self, r):
-        """Padroniza UMA linha para NCOLS colunas de forma deterministica.
-
-        Ancoras: POSICAO e sempre o ultimo campo; UF e sempre sigla de 2 letras
-        e deve ficar no indice 5. Se a linha ja tem NCOLS, retorna como esta.
-        """
-        if len(r) == NCOLS:
-            return r
-        if len(r) > NCOLS:
-            # Nunca observado neste arquivo; sinaliza para inspecao manual.
-            self.descartadas.append(('mais_colunas', r))
-            return None
-
-        posicao = r[-1]      # POSICAO sempre no fim
-        corpo = r[:-1]       # restante da linha
-
-        # Corrige deslocamento inicial: se UF caiu no indice 4, a
-        # ESTACAO_ENTREGA veio vazia e foi descartada -> repoe em branco.
-        if len(corpo) > IDX_UF and corpo[IDX_UF] in UFS:
-            pass                              # ja alinhado
-        elif len(corpo) > IDX_UF - 1 and corpo[IDX_UF - 1] in UFS:
-            corpo.insert(IDX_UF - 1, ' ')     # repoe ESTACAO_ENTREGA vazio
-        # (se nao achar UF em nenhum dos dois, segue e apenas completa no fim)
-
-        # Completa as colunas finais vazias que foram descartadas
-        if len(corpo) > NCOLS - 1:
-            self.descartadas.append(('corpo_grande', r))
-            return None
-        corpo += [' '] * (NCOLS - 1 - len(corpo))
-        corpo.append(posicao)                 # POSICAO volta para o fim
-        return corpo
-
+        self.df = pd.read_csv(arq,sep='\t',skiprows=1)
+       
     def trata_nuvens(self):
-        data = [self._realinhar(r) for r in self.dados]
-        data = [r for r in data if r is not None]
-
-        nuvens_df = pd.DataFrame(data, columns=COLUNAS)
-
-        nuvens_df['SEV'] = pd.to_numeric(nuvens_df['SEV'], downcast='signed',
-                                         errors='coerce')
-        nuvens_df = nuvens_df.drop(columns=['ID', 'POSICAO'])
-        nuvens_df = nuvens_df.drop_duplicates()
+        nuvens_df = self.df.drop(index=self.df[self.df.Camada == 'Nuvens Terceiros Rádio IP'].index.to_list(),columns=['POSICAO','Camada','OBJECTID']).drop_duplicates().reset_index(drop=True)
 
         return nuvens_df
     
