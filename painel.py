@@ -178,8 +178,6 @@ def selecionar_nuvens():
     tratador = tratamentoNuvens(f"{arquivo_nuvens}")
     nuvens = tratador.trata_nuvens()
     #EXIBE QUANTAS NAO FOI POSSIVEL TRATAR
-    if tratador.descartadas:
-        print(f'Atencao: {len(tratador.descartadas)} linha(s) precisam de conferencia manual')
     nuvens.to_excel('arquivo_nuvens.xlsx',index=False)
     button_nuvens = ctk.CTkButton(janela,text="Nuvens",height=20,width=35,corner_radius=8,fg_color='green',hover_color='blue', command=selecionar_nuvens)
     button_nuvens.place(x=100,y=200)
