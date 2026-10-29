@@ -19,9 +19,9 @@ pd.set_option('future.no_silent_downcasting', True)
 
 engine = create_engine('mysql+pymysql://viabilidade:senha_segura123#@10.0.15.243:3306/desenvolvimento_viabilidade')
 
-capacity = pd.read_excel('./arquivos/capacity.xlsx')
+# capacity = pd.read_excel('./arquivos/capacity.xlsx')
 tecnologia_capacity = pd.read_excel('./arquivos/tecnologia_capacity.xlsx')
-capacity_fixa = pd.read_excel('./arquivos/capacity_fixa.xlsx')
+# capacity_fixa = pd.read_excel('./arquivos/capacity_fixa.xlsx')
 facilidades = pd.read_excel('./arquivos/facilidades_tecnologia_prioridade.xlsx').sort_values('PRIORIDADE',ascending=True).fillna('')
 tecnologia_bbip_epl_eaccess = pd.read_excel('./arquivos/tecnologia_bbip_eaccess_epl.xlsx')
 bb_municipio_estacao = pd.read_excel('./arquivos/bb_municipio_estacao.xlsx')
@@ -52,6 +52,10 @@ try:
     capacity_funil.to_excel('./arquivos/capacity_funil.xlsx',index=False)
     custos_proprios = pd.read_sql('SELECT * FROM custos_nfv', engine)
     custos_proprios.to_excel('./arquivos/custos_nfv.xlsx',index=False)
+    capacity = pd.read_sql('SELECT * FROM capacity_sdh_net', engine)
+    capacity.to_excel('./arquivos/capacity.xlsx',index=False)
+    capacity_fixa = pd.read_sql('SELECT * FROM capacity_fixa', engine)
+    capacity_fixa.to_excel('./arquivos/capacity_fixa.xlsx',index=False)
 except:
     valores_ethernet = pd.read_csv("./arquivos/valores_ethernet.csv")
     valores_banda_larga = pd.read_csv("./arquivos/valores_banda_larga.csv")
@@ -60,6 +64,8 @@ except:
     status = status.fillna('OK')
     capacity_funil = pd.read_excel('./arquivos/capacity_funil.xlsx')
     custos_proprios = pd.read_excel('./arquivos/custos_nfv.xlsx')
+    custos_acesso = pd.read_excel('./arquivos/custos_nfv.xlsx')
+    capacity_fixa = pd.read_excel('./arquivos/capacity_fixa.xlsx')
     pass
 
 
@@ -464,16 +470,22 @@ def tratativa_inicial():
                                                     for nome_nuvem in aux_resumosoe[f'{v.FACILIDADE}_INFORMACAO'].values[0].split(' / '):
                                                         aux_nuvem = selecionar_nuvem_compativel(nuvens, value.SEV, tec, nome_nuvem, aux_resumosoe[f'{v.FACILIDADE}_ESTACAO_ENTREGA'].values[0])
                                                         if len(aux_nuvem) > 0:
-                                                            if value.VEL <= aux_nuvem.CAPACITY_NUVEM.values[0]:
+                                                            if value.SERVICO == 'VPE - VIP BSOD LIGHT':
                                                                 sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] = v.FACILIDADE.replace('_',' ')
                                                                 sevs_tratar.at[index,'OBS_FECHAMENTO'] = f'FABRICANTE {aux_nuvem.FABRICANTE_OLT.values[0]} CONCENTRADOR OLT {aux_nuvem.CONCENTRADOR_OLT.values[0]}'
                                                                 sevs_tratar.at[index,'ESTACAO_DE_ENTREGA'] = aux_resumosoe[f'{v.FACILIDADE}_ESTACAO_ENTREGA'].values[0]
-                                                                if value.SERVICO == 'VPE - VIP BSOD LIGHT':
-                                                                    sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = 'VIRTUA GPON'
-                                                                    break
-                                                                elif tec != 'VIRTUA GPON':
-                                                                    sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = tec
-                                                                    break
+                                                                sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = 'VIRTUA GPON'
+                                                                break
+                                                            elif value.VEL <= aux_nuvem.CAPACITY_NUVEM.values[0]:
+                                                                sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] = v.FACILIDADE.replace('_',' ')
+                                                                sevs_tratar.at[index,'OBS_FECHAMENTO'] = f'FABRICANTE {aux_nuvem.FABRICANTE_OLT.values[0]} CONCENTRADOR OLT {aux_nuvem.CONCENTRADOR_OLT.values[0]}'
+                                                                sevs_tratar.at[index,'ESTACAO_DE_ENTREGA'] = aux_resumosoe[f'{v.FACILIDADE}_ESTACAO_ENTREGA'].values[0]
+                                                                # if value.SERVICO == 'VPE - VIP BSOD LIGHT':
+                                                                #     sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = 'VIRTUA GPON'
+                                                                #     break
+                                                                # elif tec != 'VIRTUA GPON':
+                                                                sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = tec
+                                                                    # break
                                                 elif v.TECNOLOGIA == 'GPON RES RESID':
                                                     sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] = v.FACILIDADE.replace('_',' ')
                                                     sevs_tratar.at[index,'OBS_FECHAMENTO'] = aux_resumosoe[f'{v.FACILIDADE}_INFORMACAO'].values[0]
@@ -611,6 +623,13 @@ def prox_acesso():
             sevs_tratar.at[index,'VEL'] = int(value.VELOCIDADE[:-4]) / 1000
 
     for index, value in sevs_tratar.iterrows():
+        tecnologia_original = value.TECNOLOGIA_ACESSO_PRINCIPAL
+        facilidade_original = value.RESPOSTA_FACILIDADE
+
+        encontrou_novo_acesso = False
+
+        sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] = ''
+        
         sevs_tratar.at[index,'HP_GED'] = ''
         if value.RESPOSTA_FACILIDADE != 'INVIAVEL':
             # print(1)
@@ -633,7 +652,7 @@ def prox_acesso():
                             # print(5)
                             if v.FACILIDADE != value.FACILIDADE_ACESSO_DISTINTO.upper():
                                 # print(6)
-                                if sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] == value.TECNOLOGIA_ACESSO_PRINCIPAL:
+                                if not encontrou_novo_acesso:
                                     # print(7)
 
                                     
@@ -669,7 +688,7 @@ def prox_acesso():
                                                 break
                                             elif v.FACILIDADE == 'FO_GPON_RESID_ETH':
                                                 for tec in v.TECNOLOGIA.split('/'):
-                                                    if sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] == '':
+                                                    if sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] == facilidade_original:
                                                         if v.TECNOLOGIA == 'GPON RES MOVEL':
                                                             for nome_nuvem in aux_resumosoe[f'{v.FACILIDADE}_INFORMACAO'].values[0].split(' / '):
                                                                 aux_nuvem = selecionar_nuvem_compativel(nuvens, value.SEV, tec, nome_nuvem, aux_resumosoe[f'{v.FACILIDADE}_ESTACAO_ENTREGA'].values[0])
@@ -683,6 +702,7 @@ def prox_acesso():
                                                                             break
                                                                         elif tec != 'VIRTUA GPON':
                                                                             sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = tec
+                                                                            encontrou_novo_acesso = True
                                                                             break
                                                         elif v.TECNOLOGIA == 'GPON RES RESID':
                                                             sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] = v.FACILIDADE.replace('_',' ')
@@ -693,18 +713,20 @@ def prox_acesso():
                                                                 break
                                                             elif tec != 'VIRTUA GPON':
                                                                 sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = tec
+                                                                encontrou_novo_acesso = True
                                                                 break
                                             elif v.FACILIDADE == 'FO_GPON_RESID_ETH_PRE_VIAVEL':
                                                 for tec in v.TECNOLOGIA.split('/'):
-                                                    if sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] == '':
+                                                    if sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] == facilidade_original:
                                                         sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] = v.FACILIDADE.replace('_',' ')
                                                         sevs_tratar.at[index,'OBS_FECHAMENTO'] = aux_resumosoe[f'{v.FACILIDADE}_INFORMACAO'].values[0]
                                                         sevs_tratar.at[index,'ESTACAO_DE_ENTREGA'] = aux_resumosoe[f'{v.FACILIDADE}_ESTACAO_ENTREGA'].values[0]
                                                         sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = tec
+                                                        encontrou_novo_acesso = True
                                                         break
                                             elif v.FACILIDADE == 'FO_XGSPON_RESID_ETH':
                                                 for tec in v.TECNOLOGIA.split('/'):
-                                                    if sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] == '':
+                                                    if sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] == facilidade_original:
                                                         if v.TECNOLOGIA == 'XGSPON RES MOVEL':
                                                             for nome_nuvem in aux_resumosoe[f'{v.FACILIDADE}_INFORMACAO'].values[0].split(' / '):
                                                                 aux_nuvem = selecionar_nuvem_compativel(nuvens, value.SEV, tec, nome_nuvem, aux_resumosoe[f'{v.FACILIDADE}_ESTACAO_ENTREGA'].values[0])
@@ -714,12 +736,14 @@ def prox_acesso():
                                                                         sevs_tratar.at[index,'OBS_FECHAMENTO'] = f'FABRICANTE {aux_nuvem.FABRICANTE_OLT.values[0]} CONCENTRADOR OLT {aux_nuvem.CONCENTRADOR_OLT.values[0]}'
                                                                         sevs_tratar.at[index,'ESTACAO_DE_ENTREGA'] = aux_resumosoe[f'{v.FACILIDADE}_ESTACAO_ENTREGA'].values[0]
                                                                         sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = tec
+                                                                        encontrou_novo_acesso = True
                                                                         break
                                                         elif v.TECNOLOGIA == 'XGSPON RES RESID':
                                                             sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] = v.FACILIDADE.replace('_',' ')
                                                             sevs_tratar.at[index,'OBS_FECHAMENTO'] = aux_resumosoe[f'{v.FACILIDADE}_INFORMACAO'].values[0]
                                                             sevs_tratar.at[index,'ESTACAO_DE_ENTREGA'] = aux_resumosoe[f'{v.FACILIDADE}_ESTACAO_ENTREGA'].values[0]
                                                             sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = tec
+                                                            encontrou_novo_acesso = True
                                                             break
                                             elif (v.FACILIDADE == 'SATELITE_BANDA_KA') | (v.FACILIDADE == 'SATELITE_BANDA_KU'):
                                                 sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] = v.FACILIDADE.replace('_',' ')
@@ -738,11 +762,12 @@ def prox_acesso():
                                                     sevs_tratar.at[index,'CONCATENADO_PROVEDOR'] = ''
                                                     sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = ''
                                                     break
-                                                if sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] == value.TECNOLOGIA_ACESSO_PRINCIPAL:
+                                                if not encontrou_novo_acesso:
                                                     sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] = v.FACILIDADE.replace('_',' ')
                                                     sevs_tratar.at[index,'CONCATENADO_PROVEDOR'] = aux_resumosoe.TERCEIROS_ETH_INFORMACAO.values[0].split('PROPRIETÁRIO ')[-1]
                                                     sevs_tratar.at[index,'ESTACAO_DE_ENTREGA'] = aux_resumosoe.TERCEIROS_ETH_ESTACAO_ENTREGA.values[0].split(' / ')[-1]
                                                     sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = 'TERCEIRO ETH'
+                                                    encontrou_novo_acesso = True
 
                                                     break
                                                 
@@ -752,7 +777,7 @@ def prox_acesso():
                                                 for tec in v.TECNOLOGIA.split('/'):
                                                     
 
-                                                    if sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] == value.TECNOLOGIA_ACESSO_PRINCIPAL:
+                                                    if not encontrou_novo_acesso:
                                                         for nome_nuvem in aux_resumosoe[f'{v.FACILIDADE}_INFORMACAO'].values[0].split(' / '):
                                                             
                                                             aux_nuvem = selecionar_nuvem_compativel(nuvens, value.SEV, tec, nome_nuvem, aux_resumosoe[f'{v.FACILIDADE}_ESTACAO_ENTREGA'].values[0])
@@ -766,7 +791,7 @@ def prox_acesso():
                                                                             sevs_tratar.at[index,'OBS_FECHAMENTO'] = f'{aux_nuvem.NOME_NUVEM.values[0]} {aux_nuvem.ESTACAO_ENTREGA.values[0]}'
                                                                         sevs_tratar.at[index,'ESTACAO_DE_ENTREGA'] = aux_nuvem.CENTRO_ROTEAMENTO.values[0]
                                                                         sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = tec
-                                                                        
+                                                                        encontrou_novo_acesso = True
 
                                                                         break
 
@@ -779,7 +804,7 @@ def prox_acesso():
                                                                         sevs_tratar.at[index,'OBS_FECHAMENTO'] = f'{aux_nuvem.NOME_NUVEM.values[0]} {aux_nuvem.ESTACAO_ENTREGA.values[0]}'
                                                                     sevs_tratar.at[index,'ESTACAO_DE_ENTREGA'] = aux_nuvem.CENTRO_ROTEAMENTO.values[0]
                                                                     sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = tec
-
+                                                                    encontrou_novo_acesso = True
                                                                     break
                                                                 elif value.VEL >= aux_nuvem.CAPACITY_NUVEM.values[0]:
                                                                     pass                                                            
@@ -793,7 +818,7 @@ def prox_acesso():
                                             
                                     elif aux_resumosoe[f'{v.FACILIDADE}'].values[0] == '%Disponibilidade não atende ao desejado':
                                         
-                                        if sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] == value.TECNOLOGIA_ACESSO_PRINCIPAL:
+                                        if not encontrou_novo_acesso:
                                             if (v.FACILIDADE == 'SATELITE_BANDA_KA') | (v.FACILIDADE == 'SATELITE_BANDA_KU'):
                                                 sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] = v.FACILIDADE.replace('_',' ')
                                                 sevs_tratar.at[index,'OBS_FECHAMENTO'] = aux_resumosoe.TERCEIROS_ETH_INFORMACAO.values[0]
@@ -817,7 +842,7 @@ def prox_acesso():
                                     #         sevs_tratar.at[index,'CONCATENADO_PROVEDOR'] = ''
                                     #         sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = ''
                                     #         break
-                if (sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] == value.TECNOLOGIA_ACESSO_PRINCIPAL) & (value.DESIGNACAO == ''):
+                if (not encontrou_novo_acesso) and (value.DESIGNACAO == ''):
                     # print(value.TECNOLOGIA_ACESSO_PRINCIPAL)
                     # print(sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'])
                     sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] = 'INVIAVEL'
@@ -848,7 +873,10 @@ def acesso_anterior():
             sevs_tratar.at[index,'VEL'] = int(value.VELOCIDADE[:-4]) / 1000
 
     for index, value in sevs_tratar.iterrows():
+        encontrou_acesso = False
 
+        tecnologia_original = value.TECNOLOGIA_ACESSO_PRINCIPAL
+        facilidade_original = value.RESPOSTA_FACILIDADE
 
         if value.TRAVA_ACESSO == '':
             if value.DESIGNACAO != '':
@@ -864,7 +892,7 @@ def acesso_anterior():
                     for i,v in facilidades[facilidades.PRIORIDADE < prioridade_tecnologia].sort_values(by='PRIORIDADE',ascending=False).iterrows():
                         if v.FACILIDADE != value.FACILIDADE_ACESSO_DISTINTO.upper().replace(' ','_'):
                             if v.FACILIDADE != value.FACILIDADE_ACESSO_DISTINTO.upper():
-                                if sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] == value.RESPOSTA_FACILIDADE:
+                                if not encontrou_acesso:
                                     if ('Viável' in aux_resumosoe[v.FACILIDADE].values[0]) | ('Nuvem Avaliar Capacidade' in aux_resumosoe[v.FACILIDADE].values[0]):
                                         
                                         if v.VERIFICA_CAPACITY == 'N':
@@ -895,7 +923,7 @@ def acesso_anterior():
                                                 break
                                             elif v.FACILIDADE == 'FO_GPON_RESID_ETH':
                                                 for tec in v.TECNOLOGIA.split('/'):
-                                                    if sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] == '':
+                                                    if sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] == facilidade_original:
                                                         if v.TECNOLOGIA == 'GPON RES MOVEL':
                                                             for nome_nuvem in aux_resumosoe[f'{v.FACILIDADE}_INFORMACAO'].values[0].split(' / '):
                                                                 aux_nuvem = selecionar_nuvem_compativel(nuvens, value.SEV, tec, nome_nuvem, aux_resumosoe[f'{v.FACILIDADE}_ESTACAO_ENTREGA'].values[0])
@@ -909,6 +937,7 @@ def acesso_anterior():
                                                                             break
                                                                         elif tec != 'VIRTUA GPON':
                                                                             sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = tec
+                                                                            encontrou_novo_acesso = True
                                                                             break
                                                         elif v.TECNOLOGIA == 'GPON RES RESID':
                                                             sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] = v.FACILIDADE.replace('_',' ')
@@ -919,18 +948,20 @@ def acesso_anterior():
                                                                 break
                                                             elif tec != 'VIRTUA GPON':
                                                                 sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = tec
+                                                                encontrou_novo_acesso = True
                                                                 break
                                             elif v.FACILIDADE == 'FO_GPON_RESID_ETH_PRE_VIAVEL':
                                                 for tec in v.TECNOLOGIA.split('/'):
-                                                    if sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] == '':
+                                                    if sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] == facilidade_original:
                                                         sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] = v.FACILIDADE.replace('_',' ')
                                                         sevs_tratar.at[index,'OBS_FECHAMENTO'] = aux_resumosoe[f'{v.FACILIDADE}_INFORMACAO'].values[0]
                                                         sevs_tratar.at[index,'ESTACAO_DE_ENTREGA'] = aux_resumosoe[f'{v.FACILIDADE}_ESTACAO_ENTREGA'].values[0]
                                                         sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = tec
+                                                        encontrou_novo_acesso = True
                                                         break
                                             elif v.FACILIDADE == 'FO_XGSPON_RESID_ETH':
                                                 for tec in v.TECNOLOGIA.split('/'):
-                                                    if sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] == '':
+                                                    if sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] == facilidade_original:
                                                         if v.TECNOLOGIA == 'XGSPON RES MOVEL':
                                                             for nome_nuvem in aux_resumosoe[f'{v.FACILIDADE}_INFORMACAO'].values[0].split(' / '):
                                                                 aux_nuvem = selecionar_nuvem_compativel(nuvens, value.SEV, tec, nome_nuvem, aux_resumosoe[f'{v.FACILIDADE}_ESTACAO_ENTREGA'].values[0])
@@ -940,12 +971,14 @@ def acesso_anterior():
                                                                         sevs_tratar.at[index,'OBS_FECHAMENTO'] = f'FABRICANTE {aux_nuvem.FABRICANTE_OLT.values[0]} CONCENTRADOR OLT {aux_nuvem.CONCENTRADOR_OLT.values[0]}'
                                                                         sevs_tratar.at[index,'ESTACAO_DE_ENTREGA'] = aux_resumosoe[f'{v.FACILIDADE}_ESTACAO_ENTREGA'].values[0]
                                                                         sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = tec
+                                                                        encontrou_novo_acesso = True
                                                                         break
                                                         elif v.TECNOLOGIA == 'XGSPON RES RESID':
                                                             sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] = v.FACILIDADE.replace('_',' ')
                                                             sevs_tratar.at[index,'OBS_FECHAMENTO'] = aux_resumosoe[f'{v.FACILIDADE}_INFORMACAO'].values[0]
                                                             sevs_tratar.at[index,'ESTACAO_DE_ENTREGA'] = aux_resumosoe[f'{v.FACILIDADE}_ESTACAO_ENTREGA'].values[0]
                                                             sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = tec
+                                                            encontrou_novo_acesso = True
                                                             break
                                             elif (v.FACILIDADE == 'SATELITE_BANDA_KA') | (v.FACILIDADE == 'SATELITE_BANDA_KU'):
                                                 sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] = v.FACILIDADE.replace('_',' ')
@@ -965,19 +998,19 @@ def acesso_anterior():
                                                     sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = ''
                                                     sevs_tratar.at[index,'CONCATENADO_PROVEDOR'] = ''
                                                     break
-                                                if sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] == value.RESPOSTA_FACILIDADE:
+                                                if not encontrou_acesso:
                                                     sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] = v.FACILIDADE.replace('_',' ')
                                                     sevs_tratar.at[index,'CONCATENADO_PROVEDOR'] = aux_resumosoe.TERCEIROS_ETH_INFORMACAO.values[0].split('PROPRIETÁRIO ')[-1]
                                                     sevs_tratar.at[index,'ESTACAO_DE_ENTREGA'] = aux_resumosoe.TERCEIROS_ETH_ESTACAO_ENTREGA.values[0].split(' / ')[-1]
                                                     sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = 'TERCEIRO ETH'
-
+                                                    encontrou_novo_acesso = True
                                                     break
                                                 
                                                 
                                             else:
                                                 for tec in v.TECNOLOGIA.split('/'):
 
-                                                    if sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] == value.RESPOSTA_FACILIDADE:
+                                                    if not encontrou_acesso:
                                                         
                                                         for nome_nuvem in aux_resumosoe[f'{v.FACILIDADE}_INFORMACAO'].values[0].split(' / '):
                                                             
@@ -992,6 +1025,7 @@ def acesso_anterior():
                                                                             sevs_tratar.at[index,'OBS_FECHAMENTO'] = f'{aux_nuvem.NOME_NUVEM.values[0]} {aux_nuvem.ESTACAO_ENTREGA.values[0]}'
                                                                         sevs_tratar.at[index,'ESTACAO_DE_ENTREGA'] = aux_nuvem.CENTRO_ROTEAMENTO.values[0]
                                                                         sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = tec
+                                                                        encontrou_novo_acesso = True
                                                                         sevs_tratar.at[index,'CONCATENADO_PROVEDOR'] = ''
 
                                                                         break
@@ -1005,6 +1039,7 @@ def acesso_anterior():
                                                                         sevs_tratar.at[index,'OBS_FECHAMENTO'] = f'{aux_nuvem.NOME_NUVEM.values[0]} {aux_nuvem.ESTACAO_ENTREGA.values[0]}'
                                                                     sevs_tratar.at[index,'ESTACAO_DE_ENTREGA'] = aux_nuvem.CENTRO_ROTEAMENTO.values[0]
                                                                     sevs_tratar.at[index,'TECNOLOGIA_ACESSO_PRINCIPAL'] = tec
+                                                                    encontrou_novo_acesso = True
                                                                     sevs_tratar.at[index,'CONCATENADO_PROVEDOR'] = ''
 
                                                                     break
@@ -1019,7 +1054,7 @@ def acesso_anterior():
 
                                             
                                     elif aux_resumosoe[f'{v.FACILIDADE}'].values[0] == '%Disponibilidade não atende ao desejado':
-                                        if sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] == value.RESPOSTA_FACILIDADE:
+                                        if not encontrou_acesso:
                                             if (v.FACILIDADE == 'SATELITE_BANDA_KA') | (v.FACILIDADE == 'SATELITE_BANDA_KU'):
                                                 sevs_tratar.at[index,'RESPOSTA_FACILIDADE'] = v.FACILIDADE.replace('_',' ')
                                                 sevs_tratar.at[index,'OBS_FECHAMENTO'] = aux_resumosoe.TERCEIROS_ETH_INFORMACAO.values[0]
@@ -1362,9 +1397,12 @@ def finaliza_sevs():
                         fechamento_teia.at[0,'id_provedor'] = aux_id_facilidade.ID_EMPRESA.values[0]
                     else:
                         if value.SERVICO == 'VPE - VIP BSOD LIGHT':
-                            aux_provedores = id_provedores[id_provedores.PROVEDOR_TEIA.str.contains('BANDA LARGA')]
-                            aux_provedores = aux_provedores[aux_provedores.PROVEDOR_TEIA.str.contains(value.PROVEDOR_FINAL_TER)]
-                            aux_provedores = aux_provedores[aux_provedores.UF == value.UF]
+                            if value.PROVEDOR_FINAL_TER == 'GENERICO - BANDA LARGA':
+                                aux_provedores = id_provedores[id_provedores.PROVEDOR_TEIA == 'GENERICO - BANDA LARGA']
+                            else:
+                                aux_provedores = id_provedores[id_provedores.PROVEDOR_TEIA.str.contains('BANDA LARGA')]
+                                aux_provedores = aux_provedores[aux_provedores.PROVEDOR_TEIA.str.contains(value.PROVEDOR_FINAL_TER)]
+                                aux_provedores = aux_provedores[aux_provedores.UF == value.UF]
                             
                             try:
                                 fechamento_teia.at[0,'provedor'] = aux_provedores.PROVEDOR_TEIA.values[0]
